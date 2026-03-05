@@ -6,7 +6,7 @@ Predictive analysis and modeling of tourism data for the Canary Islands.
 
 This repository contains an analysis (and possibly predictive models) of tourism statistics in the Canary Islands (Spain). The main goal is to understand historical trends in tourist arrivals, stays, seasonality, nationality distributions, or similar metrics — and potentially forecast future tourism demand using statistical or machine learning techniques.
 
-The core work seems implemented in an R Markdown document (`CanaryIslandTouristPRED.Rmd`), which likely includes:
+The core work seems implemented in an R Markdown document (`CanaryIslandTouristPRED.Rmd`):
 
 - Data loading & cleaning
 - Exploratory data analysis (EDA)
@@ -18,10 +18,3 @@ The core work seems implemented in an R Markdown document (`CanaryIslandTouristP
 
 - **Language**: R
 - **Key packages** (most likely used): tidyverse (dplyr, ggplot2, tidyr), lubridate, forecast, prophet, knitr/rmarkdown, possibly others (caret/tidymodels if ML)
-
-
-
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/JuanFranciscoGarcia/CanaryIslandTouristPRED.git
