@@ -1,0 +1,204 @@
+---
+title: "Pasajeros Canarias FINAL"
+author: "Lucía Varona"
+date: "2025-04-29"
+output:
+  word_document: default
+  html_document: default
+---
+```{r}
+library(tsoutliers)
+library(forecast)
+library(tseries)
+library(lmtest)
+library(devtools)
+
+
+pas_can = read.table('datos_pas_canarias.csv', header = T)
+pas_can_ts = ts(pas_can$Pasajeros[0:240], start = c(2004, 1), frequency = 12)
+print(pas_can_ts)
+plot(pas_can_ts, type="l", main="Serie de pasajeros")
+
+
+outliers = tso(pas_can_ts)
+outliers
+plot(outliers)
+
+nuevaserie = outliers$yadj  # Serie ajustada sin atípicos
+par(mfrow=c(1,2))
+plot(pas_can_ts, main="Serie Original")
+plot(nuevaserie, main="Serie Sin Atípicos")
+
+
+# Transformación logarítmica
+logSerie = log(nuevaserie)
+plot(logSerie, type="l", main="Serie Transformada Log") # No se ve mucho cambio, por lo que nos quedamos con la original
+
+# Diferenciación regular
+diffSerie = diff(nuevaserie)
+plot(diffSerie, type="l", main="Serie Diferenciada (1ra Diferencia regular)")
+
+# Diferenciación estacional
+d12diffSerie = diff(diffSerie, lag=12)
+plot(d12diffSerie, type="l", main="Serie Diferenciada Estacionalmente")
+
+# Resumen de transformaciones
+par(mfrow=c(3,1))
+plot(nuevaserie, type="l", main="Serie Original")
+plot(diffSerie, type="l", main="Serie Diferenciada (1ra Diferencia regular)")
+plot(d12diffSerie, type="l", main="Serie Diferenciada Estacionalmente")
+
+
+# ACF y PACF para identificación de p, q, P, Q
+
+par(mfrow=c(1,2))
+acf(d12diffSerie, lag.max=100, main="ACF de la Serie Transformada")
+pacf(d12diffSerie, lag.max=100, main="PACF de la Serie Transformada")
+
+
+# Estimar modelo ARIMA
+
+mod0 = arima(nuevaserie, order = c(0,1,1), seasonal = list(order=c(1,1,1), period=12))
+mod01 = arima(nuevaserie, order = c(0,1,1), seasonal = list(order=c(0,1,1), period=12))
+mod1 = arima(nuevaserie, order = c(1,1,1), seasonal = list(order=c(1,1,1), period=12))
+
+
+# Evaluación de mod0 (primer modelo)
+    
+  # 1) Estimación de parámetros
+mod0 # p-valor (sar1) >> 0,05 → Probar nuevo modelo mod01 con P=0
+
+# Prueba de estabilidad
+plot(mod0)
+
+# Relevancia de los coeficientes
+coeftest(mod0)
+
+summary(mod0)
+
+
+  # 2) Diagnosis
+resi0 = residuals(mod0)
+resi0
+
+# Prueba de homocedasticidad
+plot(resi0)
+
+# Contraste de independencia individual
+par(mfrow=c(1,2))
+acf(resi0, lag.max=100, main="ACF de los Residuos")
+pacf(resi0, lag.max=100, main="PACF de los Residuos")
+
+# Prueba de independencia grupal Ljung-Box
+tsdiag(mod0)
+
+# Prueba de normalidad con gráficos QQ
+par(mfrow=c(1,1))
+qqnorm(resi0, main="QQ-Plot de Residuos")
+qqline(resi0)
+
+# Test de normalidad Kolmogorov-Smirnov
+ks.test(resi0, "pnorm", mean(resi0), sd(resi0))
+
+
+# Evaluación de mod01 (segundo modelo)
+
+  # 1) Estimación de parámetros
+mod01
+
+# Prueba de estabilidad
+plot(mod01)
+
+# Relevancia de los coeficientes
+coeftest(mod01)
+
+summary(mod01)
+
+
+  # 2) Diagnosis
+resi01 = residuals(mod01)
+resi01
+
+# Prueba de homocedasticidad
+plot(resi01)
+
+# Contraste de independencia individual
+par(mfrow=c(1,2))
+acf(resi01, lag.max=100, main="ACF de los Residuos")
+pacf(resi01, lag.max=100, main="PACF de los Residuos")
+
+# Prueba de independencia grupal Ljung-Box
+tsdiag(mod01)
+
+# Prueba de normalidad con gráficos QQ
+par(mfrow=c(1,1))
+qqnorm(resi01, main="QQ-Plot de Residuos")
+qqline(resi01)
+
+# Test de normalidad Kolmogorov-Smirnov
+ks.test(resi01, "pnorm", mean(resi01), sd(resi01))
+
+
+# Evaluación de mod1 (tercer modelo)
+
+  # 1) Estimación de parámetros
+mod1
+
+# Prueba de estabilidad
+plot(mod1)
+
+# Relevancia de los coeficientes
+coeftest(mod1)
+summary(mod1)
+
+
+  # 2) Diagnosis
+resi1 = residuals(mod1)
+resi1
+
+# Prueba de homocedasticidad
+plot(resi1)
+
+# Contraste de independencia individual
+par(mfrow=c(1,2))
+acf(resi1, lag.max=100, main="ACF de los Residuos")
+pacf(resi1, lag.max=100, main="PACF de los Residuos")
+
+# Prueba de independencia grupal Ljung-Box
+tsdiag(mod1)
+
+# Prueba de normalidad con gráficos QQ
+par(mfrow=c(1,1))
+qqnorm(resi1, main="QQ-Plot de Residuos")
+qqline(resi1)
+
+# Test de normalidad Kolmogorov-Smirnov
+ks.test(resi1, "pnorm", mean(resi1), sd(resi1))
+
+
+# Comparación de BIC
+BIC(mod0, mod01, mod1)
+# Como el mod01 tiene menor BIC, nos quedamos con ese
+
+
+# Predicciones a 12 meses con intervalos de confianza mod01
+
+futurVal01 = forecast(mod01, h=12, level=c(95.0))
+
+plot(futurVal01, main="Predicción 12 Meses mod01")
+print(futurVal01)
+
+# Predicciones a 12 meses con intervalos de confianza mod1
+
+futurVal1 = forecast(mod1, h=12, level=c(95.0))
+
+plot(futurVal1, main="Predicción 12 Meses mod1")
+print(futurVal1)
+
+
+# Aquí hay que calcular el MAPE de cada modelo de forma manual, no con la función
+test = ts(pas_can$Pasajeros[241:252], 
+           start = c(2004 + floor(240/12), (240 %% 12) + 1), 
+           frequency = 12)
+```
+
